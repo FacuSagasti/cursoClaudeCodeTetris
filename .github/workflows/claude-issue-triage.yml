@@ -38,6 +38,7 @@ jobs:
                - Check existing comments for one marked with `<!-- claude-issue-triage -->` (this indicates a previous Claude triage)
                - If found, edit that comment with updated diagnosis (use `gh issue comment ${{ github.event.issue.number }} --edit <comment-id>`)
                - If not found, create a new comment with the marker included
+               - **IMPORTANT:** All comments must be formatted in valid GitHub Markdown syntax that GitHub can parse and render correctly
                - The diagnostic should include:
                  * Problem summary (what the issue is about)
                  * Root cause analysis (which file/function/concept is affected)
