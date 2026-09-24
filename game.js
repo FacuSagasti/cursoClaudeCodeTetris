@@ -4,16 +4,59 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [
-  null,
-  '#4dd0e1', // I - cyan
-  '#ffd54f', // O - yellow
-  '#ba68c8', // T - purple
-  '#81c784', // S - green
-  '#e57373', // Z - red
-  '#64b5f6', // J - blue
-  '#ffb74d', // L - orange
-];
+const SKINS = {
+  retro: {
+    colors: [
+      null,
+      '#4dd0e1', // I - cyan
+      '#ffd54f', // O - yellow
+      '#ba68c8', // T - purple
+      '#81c784', // S - green
+      '#e57373', // Z - red
+      '#64b5f6', // J - blue
+      '#ffb74d', // L - orange
+    ]
+  },
+  neon: {
+    colors: [
+      null,
+      '#00fff2', // I - cyan
+      '#faff00', // O - yellow
+      '#ff00e6', // T - magenta
+      '#39ff14', // S - green
+      '#ff073a', // Z - red
+      '#00b0ff', // J - blue
+      '#ff8c00', // L - orange
+    ]
+  },
+  pastel: {
+    colors: [
+      null,
+      '#a8d8ea', // I - light blue
+      '#fff6b7', // O - light yellow
+      '#d9b8f0', // T - light purple
+      '#b8e8c8', // S - light green
+      '#ffb3ba', // Z - light red
+      '#b3d1ff', // J - light blue
+      '#ffd8b3', // L - light orange
+    ]
+  },
+  pixel: {
+    colors: [
+      null,
+      '#00e5ff', // I - bright cyan
+      '#ffea00', // O - bright yellow
+      '#d500f9', // T - bright purple
+      '#00e676', // S - bright green
+      '#ff1744', // Z - bright red
+      '#2979ff', // J - bright blue
+      '#ff9100', // L - bright orange
+    ]
+  }
+};
+
+let COLORS = SKINS.retro.colors;
+let currentSkin = 'retro';
 
 const PIECES = [
   null,
@@ -39,25 +82,53 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
-const themeToggle = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let gridColor = '#22222e';
 
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  themeToggle.checked = theme === 'light';
-  localStorage.setItem('tetris-theme', theme);
+// Block renderers for each skin (neon/pastel/pixel replace these with custom functions)
+const drawBlockRetro = (context, x, y, colorIndex, size, alpha) => {
+  if (!colorIndex) return;
+  const color = COLORS[colorIndex];
+  context.globalAlpha = alpha ?? 1;
+  context.fillStyle = color;
+  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+  // highlight
+  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  context.globalAlpha = 1;
+};
+
+// TODO: neon/pastel/pixel replace these with actual implementations
+const drawBlockNeon = drawBlockRetro;
+const drawBlockPastel = drawBlockRetro;
+const drawBlockPixel = drawBlockRetro;
+
+const BLOCK_RENDERERS = {
+  retro: drawBlockRetro,
+  neon: drawBlockNeon,
+  pastel: drawBlockPastel,
+  pixel: drawBlockPixel
+};
+
+function applySkin(skin) {
+  if (!SKINS[skin]) skin = 'retro';
+  currentSkin = skin;
+  COLORS = SKINS[skin].colors;
+  document.documentElement.setAttribute('data-theme', skin);
+  skinSelect.value = skin;
+  localStorage.setItem('tetris-skin', skin);
   gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-color').trim();
 }
 
-function initTheme() {
-  const saved = localStorage.getItem('tetris-theme');
-  applyTheme(saved === 'light' ? 'light' : 'dark');
+function initSkin() {
+  const saved = localStorage.getItem('tetris-skin');
+  applySkin(saved || 'retro');
 }
 
-themeToggle.addEventListener('change', () => {
-  applyTheme(themeToggle.checked ? 'light' : 'dark');
+skinSelect.addEventListener('change', () => {
+  applySkin(skinSelect.value);
 });
 
 function createBoard() {
@@ -175,15 +246,8 @@ function updateHUD() {
 }
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
-  if (!colorIndex) return;
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  const renderer = BLOCK_RENDERERS[currentSkin];
+  renderer(context, x, y, colorIndex, size, alpha);
 }
 
 function drawGrid() {
@@ -319,5 +383,5 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
-initTheme();
+initSkin();
 init();
