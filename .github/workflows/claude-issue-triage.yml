@@ -1,0 +1,59 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  claude-triage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are an issue triage assistant for a Tetris game repository built with vanilla JavaScript and HTML5 Canvas.
+
+            Task:
+            1. Read the current GitHub issue (#${{ github.event.issue.number }}) title and body
+            2. Analyze the problem by reviewing relevant code files: game.js, index.html, style.css, and CLAUDE.md
+            3. Assign appropriate labels:
+               - First, list all existing labels: run `gh label list`
+               - Apply existing labels that match the issue category
+               - If no existing label fits well, create a new descriptive label (e.g., "bug", "enhancement", "ui", "game-logic", "performance", "documentation", or "needs-triage") and apply it
+               - Use: `gh issue edit ${{ github.event.issue.number }} --add-label "label-name"`
+            4. Create or update a diagnostic comment:
+               - Check existing comments for one marked with `<!-- claude-issue-triage -->` (this indicates a previous Claude triage)
+               - If found, edit that comment with updated diagnosis (use `gh issue comment ${{ github.event.issue.number }} --edit <comment-id>`)
+               - If not found, create a new comment with the marker included
+               - The diagnostic should include:
+                 * Problem summary (what the issue is about)
+                 * Root cause analysis (which file/function/concept is affected)
+                 * Suggested approach for solving it (technical direction, NOT implementation code)
+
+            Example diagnostic format:
+            ```
+            <!-- claude-issue-triage -->
+            ## Issue Diagnosis
+
+            **Problem:** [Brief summary]
+
+            **Root Cause:** [Which part of the codebase is affected - game.js line X, specific function, game state, rendering, etc.]
+
+            **Approach to Solution:** [How to fix it without writing the code yet]
+            ```
+
+            Be concise but thorough. Focus on understanding the problem so others can implement the solution.
+          claude_args: '--allowedTools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*)"'
