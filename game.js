@@ -81,7 +81,12 @@ const levelEl = document.getElementById('level');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
+const overlayStats = document.getElementById('overlay-stats');
+const playerNameContainer = document.getElementById('player-name-container');
+const playerNameInput = document.getElementById('player-name');
+const overlayRecords = document.getElementById('overlay-records');
 const restartBtn = document.getElementById('restart-btn');
+const resetRecordsBtn = document.getElementById('reset-records-btn');
 const skinSelect = document.getElementById('skin-select');
 const pauseMenu = document.getElementById('pause-menu');
 const resumeBtn = document.getElementById('resume-btn');
@@ -95,6 +100,8 @@ let board, current, next, score, lines, level, paused, gameOver, lastTime, dropA
 let gridColor = '#22222e';
 let menuOpen = false;
 let startLevel = 1;
+let maxCombo = 0, currentCombo = 0, maxLines = 0;
+let records = [];
 
 // Block renderers for each skin (neon/pastel/pixel replace these with custom functions)
 const drawBlockRetro = (context, x, y, colorIndex, size, alpha) => {
@@ -139,6 +146,63 @@ function initSkin() {
 skinSelect.addEventListener('change', () => {
   applySkin(skinSelect.value);
 });
+
+function loadRecords() {
+  const saved = localStorage.getItem('tetris-records');
+  records = saved ? JSON.parse(saved) : [];
+}
+
+function saveRecords() {
+  localStorage.setItem('tetris-records', JSON.stringify(records));
+}
+
+function addRecord(name, score, lines, maxCombo) {
+  records.push({ name, score, lines, maxCombo, date: new Date().toLocaleDateString() });
+  records.sort((a, b) => b.score - a.score);
+  records = records.slice(0, 5);
+  saveRecords();
+}
+
+function isTopScore(score) {
+  if (records.length < 5) return true;
+  return score > records[records.length - 1].score;
+}
+
+function renderRecords(highlightScore = null) {
+  if (!overlayRecords) return;
+
+  overlayRecords.innerHTML = '';
+  if (records.length === 0) {
+    overlayRecords.innerHTML = '<p class="no-records">Sin records aún</p>';
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'records-table';
+
+  const headerRow = document.createElement('tr');
+  headerRow.className = 'records-header';
+  headerRow.innerHTML = '<th>#</th><th>Nombre</th><th>Puntos</th><th>Líneas</th><th>Combo</th>';
+  table.appendChild(headerRow);
+
+  records.forEach((rec, idx) => {
+    const row = document.createElement('tr');
+    row.className = idx < 3 ? `records-row rank-${idx + 1}` : 'records-row';
+    if (highlightScore !== null && rec.score === highlightScore) {
+      row.classList.add('highlight');
+    }
+    row.innerHTML = `
+      <td>${idx + 1}</td>
+      <td>${rec.name}</td>
+      <td>${rec.score.toLocaleString()}</td>
+      <td>${rec.lines}</td>
+      <td>${rec.maxCombo}</td>
+    `;
+    table.appendChild(row);
+  });
+
+  overlayRecords.appendChild(table);
+}
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -203,10 +267,15 @@ function clearLines() {
   }
   if (cleared) {
     lines += cleared;
+    maxLines = Math.max(maxLines, lines);
+    currentCombo++;
+    maxCombo = Math.max(maxCombo, currentCombo);
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
+  } else {
+    currentCombo = 0;
   }
 }
 
@@ -314,6 +383,28 @@ function endGame() {
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
+
+  const isTop = isTopScore(score);
+  overlayStats.innerHTML = `
+    <div class="end-stats">
+      <div><strong>Líneas:</strong> ${lines}</div>
+      <div><strong>Nivel:</strong> ${level}</div>
+      <div><strong>Combo máx:</strong> ${maxCombo}</div>
+      ${isTop ? '<div class="top-message">¡TOP 5! 🎉</div>' : ''}
+    </div>
+  `;
+
+  if (isTop) {
+    playerNameContainer.style.display = 'block';
+    playerNameInput.value = '';
+    playerNameInput.focus();
+    overlayRecords.style.display = 'none';
+  } else {
+    playerNameContainer.style.display = 'none';
+    overlayRecords.style.display = 'block';
+    renderRecords();
+  }
+
   overlay.classList.remove('hidden');
 }
 
@@ -362,6 +453,9 @@ function init() {
   score = 0;
   lines = 0;
   level = parseInt(startLevel) || 1;
+  maxCombo = 0;
+  currentCombo = 0;
+  maxLines = 0;
   paused = false;
   gameOver = false;
   menuOpen = false;
@@ -374,6 +468,7 @@ function init() {
   overlay.classList.add('hidden');
   pauseMenu.classList.add('hidden');
   controlsModal.classList.add('hidden');
+  playerNameContainer.style.display = 'none';
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -406,7 +501,15 @@ document.addEventListener('keydown', e => {
   updateHUD();
 });
 
-restartBtn.addEventListener('click', init);
+restartBtn.addEventListener('click', () => {
+  if (gameOver && isTopScore(score) && playerNameContainer.style.display !== 'none') {
+    const name = playerNameInput.value.trim() || 'Anónimo';
+    addRecord(name, score, lines, maxCombo);
+    renderRecords(score);
+  }
+  init();
+});
+
 resumeBtn.addEventListener('click', togglePause);
 restartMenuBtn.addEventListener('click', init);
 controlsBtn.addEventListener('click', showControlsModal);
@@ -415,8 +518,28 @@ closeControlsBtn.addEventListener('click', closeControlsModal);
 startLevelSelect.addEventListener('change', (e) => {
   startLevel = e.target.value;
   localStorage.setItem('tetris-start-level', startLevel);
+
+resetRecordsBtn.addEventListener('click', () => {
+  if (confirm('¿Estás seguro? Esto eliminará todos los records.')) {
+    records = [];
+    localStorage.removeItem('tetris-records');
+    if (overlayRecords && overlayRecords.style.display !== 'none') {
+      renderRecords();
+    }
+  }
 });
 
+document.addEventListener('keydown', e => {
+  if (gameOver && playerNameContainer.style.display !== 'none' && e.code === 'Enter') {
+    const name = playerNameInput.value.trim() || 'Anónimo';
+    addRecord(name, score, lines, maxCombo);
+    renderRecords(score);
+    playerNameContainer.style.display = 'none';
+    overlayRecords.style.display = 'block';
+  }
+}, true);
+
+loadRecords();
 initSkin();
 const savedLevel = localStorage.getItem('tetris-start-level');
 if (savedLevel) {
