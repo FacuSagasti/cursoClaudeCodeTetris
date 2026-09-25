@@ -518,6 +518,7 @@ closeControlsBtn.addEventListener('click', closeControlsModal);
 startLevelSelect.addEventListener('change', (e) => {
   startLevel = e.target.value;
   localStorage.setItem('tetris-start-level', startLevel);
+});
 
 resetRecordsBtn.addEventListener('click', () => {
   if (confirm('¿Estás seguro? Esto eliminará todos los records.')) {
@@ -546,4 +547,4 @@ if (savedLevel) {
   startLevel = savedLevel;
   startLevelSelect.value = startLevel;
 }
-init();})
+init();
