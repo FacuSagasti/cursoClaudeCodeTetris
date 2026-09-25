@@ -546,4 +546,4 @@ if (savedLevel) {
   startLevel = savedLevel;
   startLevelSelect.value = startLevel;
 }
-init();
+init();})
