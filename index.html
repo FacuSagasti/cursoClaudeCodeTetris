@@ -59,6 +59,48 @@
         <button id="restart-btn">Reiniciar</button>
       </div>
     </div>
+
+    <div id="pause-menu" class="pause-menu hidden">
+      <div class="pause-menu-box">
+        <h2>PAUSA</h2>
+
+        <div class="menu-section">
+          <button id="resume-btn" class="menu-btn">Reanudar</button>
+          <button id="restart-menu-btn" class="menu-btn">Reiniciar</button>
+        </div>
+
+        <div class="menu-section">
+          <label for="start-level" class="menu-label">Nivel Inicial:</label>
+          <select id="start-level" class="menu-select">
+            <option value="1">Nivel 1</option>
+            <option value="2">Nivel 2</option>
+            <option value="3">Nivel 3</option>
+            <option value="4">Nivel 4</option>
+            <option value="5">Nivel 5</option>
+          </select>
+        </div>
+
+        <div class="menu-section">
+          <button id="controls-btn" class="menu-btn">Ver Controles</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="controls-modal" class="controls-modal hidden">
+      <div class="controls-modal-box">
+        <h3>CONTROLES</h3>
+        <ul class="controls-list">
+          <li><kbd>←</kbd> <kbd>→</kbd> — Mover pieza</li>
+          <li><kbd>↑</kbd> — Rotar pieza</li>
+          <li><kbd>X</kbd> — Rotar pieza</li>
+          <li><kbd>↓</kbd> — Bajar pieza rápido</li>
+          <li><kbd>Space</kbd> — Caída instantánea</li>
+          <li><kbd>P</kbd> — Pausa/Reanudar</li>
+          <li><kbd>Esc</kbd> — Pausa/Reanudar</li>
+        </ul>
+        <button id="close-controls-btn" class="menu-btn">Cerrar</button>
+      </div>
+    </div>
   </div>
 
   <script src="game.js"></script>

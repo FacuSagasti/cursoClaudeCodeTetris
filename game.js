@@ -83,9 +83,18 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const skinSelect = document.getElementById('skin-select');
+const pauseMenu = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('resume-btn');
+const restartMenuBtn = document.getElementById('restart-menu-btn');
+const controlsBtn = document.getElementById('controls-btn');
+const startLevelSelect = document.getElementById('start-level');
+const controlsModal = document.getElementById('controls-modal');
+const closeControlsBtn = document.getElementById('close-controls-btn');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let gridColor = '#22222e';
+let menuOpen = false;
+let startLevel = 1;
 
 // Block renderers for each skin (neon/pastel/pixel replace these with custom functions)
 const drawBlockRetro = (context, x, y, colorIndex, size, alpha) => {
@@ -312,14 +321,24 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    menuOpen = false;
+    pauseMenu.classList.add('hidden');
+    controlsModal.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    menuOpen = true;
+    pauseMenu.classList.remove('hidden');
   }
+}
+
+function showControlsModal() {
+  controlsModal.classList.remove('hidden');
+}
+
+function closeControlsModal() {
+  controlsModal.classList.add('hidden');
 }
 
 function loop(ts) {
@@ -342,23 +361,29 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = parseInt(startLevel) || 1;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  menuOpen = false;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  pauseMenu.classList.add('hidden');
+  controlsModal.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    togglePause();
+    return;
+  }
+  if (paused || gameOver || menuOpen) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -382,6 +407,20 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+resumeBtn.addEventListener('click', togglePause);
+restartMenuBtn.addEventListener('click', init);
+controlsBtn.addEventListener('click', showControlsModal);
+closeControlsBtn.addEventListener('click', closeControlsModal);
+
+startLevelSelect.addEventListener('change', (e) => {
+  startLevel = e.target.value;
+  localStorage.setItem('tetris-start-level', startLevel);
+});
 
 initSkin();
+const savedLevel = localStorage.getItem('tetris-start-level');
+if (savedLevel) {
+  startLevel = savedLevel;
+  startLevelSelect.value = startLevel;
+}
 init();
